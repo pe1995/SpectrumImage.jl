@@ -1,6 +1,6 @@
 <a href="url"><img src="example_image.png" height=100% width=100%/></a> 
 
-# SpectrumImage
+# SpectrumImage.jl
 
 Create an image from any spectrum. How to install the package
 

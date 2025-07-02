@@ -1,9 +1,10 @@
 module SpectrumImage
 
+using Reexport
 using PythonPlot
 using DelimitedFiles
 using PythonCall
-using LaTeXStrings
+@reexport using LaTeXStrings
 
 export spectrum
 export read_spectrum

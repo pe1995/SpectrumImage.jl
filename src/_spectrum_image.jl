@@ -12,13 +12,15 @@ where the violet part should be begin (`λ_UV`). Space before and after will be 
 
 You can specify `line_indicators` in wavelength. At the corresponding positions there will be white line indicators shown in the final image.
 
+The `units` string will be pasted directly behind the line indicators, if wanted. `show_lambda_range` will add the lambda range to the top of the image.
+
 Example:
 julia```
 # read a spectrum from file with `,` separator, uses `readdlm`. Skip e.g. the first line in this example.
-λ, F = read_spectrum("my_spectrum.csv", ',', skipstart=1)
+data = read_spectrum("my_spectrum.csv", ',', skipstart=1)
 
 # create the spectrum image
-f, ax = spectrum(λ, F; rows=30, figsize=(9, 6), show_lambda_range=true, λ_IR=5500, line_indicators=[5500, 5400], units=L"\,\rm \AA");
+f, ax = spectrum(data[:, 1], data[:, 2]; rows=30, figsize=(9, 6), show_lambda_range=true, λ_IR=5500, line_indicators=[5500, 5400]);
 ```
 """
 function spectrum(λ, F; colormap="gist_rainbow", rows=50, separator_width=2, show_lambda_range=false, λ_UV=nothing, λ_IR=nothing, line_indicators=[], units="", kwargs...)
@@ -46,8 +48,8 @@ function spectrum(λ, F; colormap="gist_rainbow", rows=50, separator_width=2, sh
 
     line_indicator_index = Dict()
     for line in line_indicators
-        if (line > min_l) | (line < max_l)
-            @warn "Line $(line) out or range for the given spectrum."
+        if (line > first(λ)) | (line < last(λ))
+            @warn "Line $(line) out or range for the given spectrum ."
         else
             line_indicator_index[argmin(abs.(λ .- line))] = line
         end
@@ -70,8 +72,8 @@ function spectrum(λ, F; colormap="gist_rainbow", rows=50, separator_width=2, sh
     for i in axes(image_matrix, 1)
         for j in axes(image_matrix, 2)
             if c in keys(line_indicator_index)
-                ax.vlines(j, i-0.5, i+0.5, color="w", lw=separator_width)
-                ax.text(j+jsep, i-0.5, "$(line_indicator_index[c])"*units, color="w", ha="left", va="top", fontsize="small")
+                ax.vlines(j, i -1 -0.5, i - 1 +0.5, color="w", lw=separator_width)
+                ax.text(j+jsep, i -1, "$(line_indicator_index[c])"*units, color="w", ha="left", va="center", fontsize="small")
             end
             c += 1
         end

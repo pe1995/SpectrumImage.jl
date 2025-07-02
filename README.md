@@ -4,7 +4,7 @@
 
 Create an image from any spectrum. How to install the package
 
-```bash
+```shell
 $ julia --project
                _
    _       _ _(_)_     |  Documentation: https://docs.julialang.org

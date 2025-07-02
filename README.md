@@ -2,7 +2,9 @@
 
 # SpectrumImage.jl
 
-Create an image from any spectrum. How to install the package
+[![Build Status](https://github.com/pe1995/SpectrumImage.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/pe1995/SpectrumImage.jl/actions/workflows/CI.yml?query=branch%3Amain)
+
+Create an image from any spectrum. How to install the package:
 
 ```
 $ julia --project
@@ -39,6 +41,3 @@ f, ax = spectrum(
 f.savefig("example_image.png", dpi=300)
 ```
 In this example, `data[:,1] --> wavelength` and `data[:,2] --> flux`. For more information see the documentation of `spectrum`, i.e. `?spectrum`.
-
-
-[![Build Status](https://github.com/pe1995/SpectrumImage.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/pe1995/SpectrumImage.jl/actions/workflows/CI.yml?query=branch%3Amain)

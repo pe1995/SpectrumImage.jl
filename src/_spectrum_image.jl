@@ -91,3 +91,6 @@ function spectrum(λ, F; colormap="gist_rainbow", rows=50, separator_width=2, sh
     ax.axis("off")
     f, ax
 end
+
+
+read_spectrum = readdlm

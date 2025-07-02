@@ -10,7 +10,7 @@ Kwargs will be passed to the plt.figure constructor. `plt.figure` and `ax` will 
 By default, the entire colormap will be used from the red end of `λ` to the blue end. You can optically specify where the red part should stop (`λ_IR`) and
 where the violet part should be begin (`λ_UV`). Space before and after will be filled by the respective color.
 """
-function spectrum(λ, F; colormap="gist_rainbow", rows=50, separator_width=2, show_lambda_range=false, λ_UV=nothing, λ_IR=nothing, kwargs...)
+function spectrum(λ, F; colormap="gist_rainbow", rows=30, separator_width=2, show_lambda_range=false, λ_UV=nothing, λ_IR=nothing, kwargs...)
     plt = matplotlib.pyplot
     matplotlib.style.use("dark_background")
 

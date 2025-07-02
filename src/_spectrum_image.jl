@@ -1,5 +1,5 @@
 """
-    spectrum(λ, F; colormap="gist_rainbow", rows=50, separator_width=2, show_lambda_range=false, λ_UV=nothing, λ_IR=nothing, kwargs...)
+    spectrum(λ, F; colormap="gist_rainbow", rows=50, separator_width=2, show_lambda_range=false, λ_UV=nothing, λ_IR=nothing, line_indicators=[], units="", kwargs...)
 
 Create a 2D spectrum image from wavelength and Flux arrays. 
 Wavelength will be used as the indicator for color, and should be chosen from `red` to `blue`.
@@ -9,8 +9,19 @@ Kwargs will be passed to the plt.figure constructor. `plt.figure` and `ax` will 
 
 By default, the entire colormap will be used from the red end of `λ` to the blue end. You can optically specify where the red part should stop (`λ_IR`) and
 where the violet part should be begin (`λ_UV`). Space before and after will be filled by the respective color.
+
+You can specify `line_indicators` in wavelength. At the corresponding positions there will be white line indicators shown in the final image.
+
+Example:
+julia```
+# read a spectrum from file with `,` separator, uses `readdlm`. Skip e.g. the first line in this example.
+λ, F = read_spectrum("my_spectrum.csv", ',', skipstart=1)
+
+# create the spectrum image
+f, ax = spectrum(λ, F; rows=30, figsize=(9, 6), show_lambda_range=true, λ_IR=5500, line_indicators=[5500, 5400], units=L"\,\rm \AA");
+```
 """
-function spectrum(λ, F; colormap="gist_rainbow", rows=30, separator_width=2, show_lambda_range=false, λ_UV=nothing, λ_IR=nothing, kwargs...)
+function spectrum(λ, F; colormap="gist_rainbow", rows=50, separator_width=2, show_lambda_range=false, λ_UV=nothing, λ_IR=nothing, line_indicators=[], units="", kwargs...)
     plt = matplotlib.pyplot
     matplotlib.style.use("dark_background")
 
@@ -33,6 +44,16 @@ function spectrum(λ, F; colormap="gist_rainbow", rows=30, separator_width=2, sh
     cmap = plt.get_cmap(colormap)
     colors = pyconvert.(Array, cmap(λ_norm))
 
+    line_indicator_index = Dict()
+    for line in line_indicators
+        if (line > min_l) | (line < max_l)
+            @warn "Line $(line) out or range for the given spectrum."
+        else
+            line_indicator_index[argmin(abs.(λ .- line))] = line
+        end
+    end
+
+
     c = 1
     for i in axes(image_matrix, 1)
         for j in axes(image_matrix, 2)
@@ -44,14 +65,27 @@ function spectrum(λ, F; colormap="gist_rainbow", rows=30, separator_width=2, sh
     f, ax = plt.subplots(1, 1; layout="tight", kwargs...)
     ax.imshow(image_matrix, aspect="auto", origin="upper", interpolation="none")
     
+    c = 1
+    jsep = size(image_matrix, 2) / 200
+    for i in axes(image_matrix, 1)
+        for j in axes(image_matrix, 2)
+            if c in keys(line_indicator_index)
+                ax.vlines(j, i-0.5, i+0.5, color="w", lw=separator_width)
+                ax.text(j+jsep, i-0.5, "$(line_indicator_index[c])"*units, color="w", ha="left", va="top", fontsize="small")
+            end
+            c += 1
+        end
+    end
+
     for i in 0:rows
         x = range(0, size(image_matrix,2)-1, length=200)|> collect
         y = fill!(similar(x), i-0.5)
         ax.plot(x, y, ls="-", color="k", lw=separator_width)
     end
+    
 
     if show_lambda_range
-        ax.text(0.0, 1.01, L"\rm \lambda: "*"$(round(maximum(λ), sigdigits=5))"*L"\rm -"*"$(round(minimum(λ), sigdigits=5))", transform=ax.transAxes)
+        ax.text(0.0, 1.01, L"\rm \lambda: "*"$(round(maximum(λ), sigdigits=5))"*units*L"\rm\, - \,"*"$(round(minimum(λ), sigdigits=5))"*units, transform=ax.transAxes)
     end
 
     ax.axis("off")

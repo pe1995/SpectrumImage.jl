@@ -14,8 +14,8 @@ You can specify `line_indicators` in wavelength. At the corresponding positions 
 
 The `units` string will be pasted directly behind the line indicators, if wanted. `show_lambda_range` will add the lambda range to the top of the image.
 
-Example:
-julia```
+# Example:
+```julia
 # read a spectrum from file with `,` separator, uses `readdlm`. Skip e.g. the first line in this example.
 data = read_spectrum("my_spectrum.csv", ',', skipstart=1)
 

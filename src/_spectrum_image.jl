@@ -1,5 +1,5 @@
 """
-    spectrum(λ, F; colormap="gist_rainbow", rows=50, separator_width=2, show_lambda_range=false, λ_UV=nothing, λ_IR=nothing, line_indicators=[], units="", kwargs...)
+    spectrum(λ, F; colormap="gist_rainbow", rows=30, separator_width=2, show_lambda_range=false, λ_UV=nothing, λ_IR=nothing, line_indicators=[], indicator_fontsize="small", units="", kwargs...)
 
 Create a 2D spectrum image from wavelength and Flux arrays. 
 Wavelength will be used as the indicator for color, and should be chosen from `red` to `blue`.
@@ -23,7 +23,7 @@ data = read_spectrum("my_spectrum.csv", ',', skipstart=1)
 f, ax = spectrum(data[:, 1], data[:, 2]; rows=30, figsize=(9, 6), show_lambda_range=true, λ_IR=5500, line_indicators=[5500, 5400]);
 ```
 """
-function spectrum(λ, F; colormap="gist_rainbow", rows=50, separator_width=2, show_lambda_range=false, λ_UV=nothing, λ_IR=nothing, line_indicators=[], units="", kwargs...)
+function spectrum(λ, F; colormap="gist_rainbow", rows=30, separator_width=1.5, show_lambda_range=false, λ_UV=nothing, λ_IR=nothing, line_indicators=[], indicator_fontsize="small", units="", kwargs...)
     plt = matplotlib.pyplot
     matplotlib.style.use("dark_background")
 
@@ -73,7 +73,7 @@ function spectrum(λ, F; colormap="gist_rainbow", rows=50, separator_width=2, sh
         for j in axes(image_matrix, 2)
             if c in keys(line_indicator_index)
                 ax.vlines(j, i -1 -0.5, i - 1 +0.5, color="w", lw=separator_width)
-                ax.text(j+jsep, i -1, "$(line_indicator_index[c])"*units, color="w", ha="left", va="center", fontsize="small")
+                ax.text(j+jsep, i -1, "$(line_indicator_index[c])"*units, color="w", ha="left", va="center", fontsize=indicator_fontsize)
             end
             c += 1
         end

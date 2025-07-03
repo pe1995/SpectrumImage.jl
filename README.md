@@ -19,7 +19,7 @@ $ julia --project
 
 (@v1.9) pkg> add https://github.com/pe1995/SpectrumImage.jl.git
 ```
-All you need to do to run the code is a spectrum. You can read it however you like, if it is a simple csv file you can just do the following:
+All you need to run the code is a spectrum. You can read it however you like, if it is a simple csv file you can just do the following:
 
 ```julia
 using SpectrumImage

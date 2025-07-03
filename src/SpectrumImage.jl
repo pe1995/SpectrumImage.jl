@@ -4,6 +4,7 @@ using Reexport
 using PythonPlot
 using DelimitedFiles
 using PythonCall
+using ArgParse
 @reexport using LaTeXStrings
 
 export spectrum

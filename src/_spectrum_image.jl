@@ -40,7 +40,7 @@ function spectrum(λ, F; colormap="gist_rainbow", rows=30, separator_width=1.5, 
     λ_norm[λ .> min_l] .= 0.0
     λ_norm[λ .< max_l] .= 1.0
 
-    min_F, max_F = notgiven(F_low) ? minimum(F) : F_low, notgiven(F_high) ? minimum(F) : F_high
+    min_F, max_F = notgiven(F_low) ? minimum(F) : F_low, notgiven(F_high) ? maximum(F) : F_high
     F_norm = (F .- min_F) ./ (max_F - min_F)
     
     columns = floor(Int, length(λ) / rows)

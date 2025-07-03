@@ -24,7 +24,7 @@ data = read_spectrum("my_spectrum.csv", ',', skipstart=1)
 f, ax = spectrum(data[:, 1], data[:, 2]; rows=30, figsize=(9, 6), show_lambda_range=true, λ_IR=5500, line_indicators=[5500, 5400]);
 ```
 """
-function spectrum(λ, F; colormap="gist_rainbow", rows=30, separator_width=1.5, show_lambda_range=false, λ_UV=nothing, λ_IR=nothing, F_low=minimum(F), F_high=maximum(F), line_indicators=[], indicator_fontsize="small", units="", kwargs...)
+function spectrum(λ, F; colormap="gist_rainbow", rows=30, separator_width=1.5, show_lambda_range=false, λ_UV=-1, λ_IR=-1, F_low=-1, F_high=-1, line_indicators=[], indicator_fontsize="small", units="", kwargs...)
     plt = matplotlib.pyplot
     matplotlib.style.use("dark_background")
 
@@ -33,12 +33,14 @@ function spectrum(λ, F; colormap="gist_rainbow", rows=30, separator_width=1.5, 
     λ = λ[λ_sort]
     F = F[λ_sort]
 
-    min_l, max_l = isnothing(λ_IR) ? first(λ) : λ_IR, isnothing(λ_UV) ? last(λ) : λ_UV
+    notgiven(a) = a < 0
+
+    min_l, max_l = notgiven(λ_IR) ? first(λ) : λ_IR, notgiven(λ_UV) ? last(λ) : λ_UV
     λ_norm = abs.((λ .- min_l) ./ (max_l - min_l))
     λ_norm[λ .> min_l] .= 0.0
     λ_norm[λ .< max_l] .= 1.0
 
-    min_F, max_F = F_low, F_high
+    min_F, max_F = notgiven(F_low) ? minimum(F) : F_low, notgiven(F_high) ? minimum(F) : F_high
     F_norm = (F .- min_F) ./ (max_F - min_F)
     
     columns = floor(Int, length(λ) / rows)

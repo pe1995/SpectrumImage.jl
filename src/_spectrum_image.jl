@@ -1,5 +1,5 @@
 """
-    spectrum(λ, F; colormap="gist_rainbow", rows=30, separator_width=2, show_lambda_range=false, λ_UV=nothing, λ_IR=nothing, line_indicators=[], indicator_fontsize="small", units="", kwargs...)
+    spectrum(λ, F; colormap="gist_rainbow", rows=30, separator_width=1.5, show_lambda_range=false, λ_UV=nothing, λ_IR=nothing, F_low=minimum(F), F_high=maximum(F), line_indicators=[], indicator_fontsize="small", units="", kwargs...)
 
 Create a 2D spectrum image from wavelength and Flux arrays. 
 Wavelength will be used as the indicator for color, and should be chosen from `red` to `blue`.
@@ -13,6 +13,7 @@ where the violet part should be begin (`λ_UV`). Space before and after will be 
 You can specify `line_indicators` in wavelength. At the corresponding positions there will be white line indicators shown in the final image.
 
 The `units` string will be pasted directly behind the line indicators, if wanted. `show_lambda_range` will add the lambda range to the top of the image.
+You can also specify `F_low` and `F_high` to adjust the maximum and minimum for the normalization.
 
 # Example:
 ```julia
@@ -23,7 +24,7 @@ data = read_spectrum("my_spectrum.csv", ',', skipstart=1)
 f, ax = spectrum(data[:, 1], data[:, 2]; rows=30, figsize=(9, 6), show_lambda_range=true, λ_IR=5500, line_indicators=[5500, 5400]);
 ```
 """
-function spectrum(λ, F; colormap="gist_rainbow", rows=30, separator_width=1.5, show_lambda_range=false, λ_UV=nothing, λ_IR=nothing, line_indicators=[], indicator_fontsize="small", units="", kwargs...)
+function spectrum(λ, F; colormap="gist_rainbow", rows=30, separator_width=1.5, show_lambda_range=false, λ_UV=nothing, λ_IR=nothing, F_low=minimum(F), F_high=maximum(F), line_indicators=[], indicator_fontsize="small", units="", kwargs...)
     plt = matplotlib.pyplot
     matplotlib.style.use("dark_background")
 
@@ -37,7 +38,7 @@ function spectrum(λ, F; colormap="gist_rainbow", rows=30, separator_width=1.5, 
     λ_norm[λ .> min_l] .= 0.0
     λ_norm[λ .< max_l] .= 1.0
 
-    min_F, max_F = minimum(F), maximum(F)
+    min_F, max_F = F_low, F_high
     F_norm = (F .- min_F) ./ (max_F - min_F)
     
     columns = floor(Int, length(λ) / rows)

@@ -68,7 +68,7 @@ function spectrum(λ, F; colormap="gist_rainbow", rows=30, separator_width=1.5, 
     end
 
     f, ax = plt.subplots(1, 1; layout="tight", kwargs...)
-    ax.imshow(image_matrix, aspect="auto", origin="upper", interpolation="none")
+    ax.imshow(image_matrix, aspect="auto", origin="upper", interpolation="none", rasterized=true)
     
     c = 1
     jsep = size(image_matrix, 2) / 200

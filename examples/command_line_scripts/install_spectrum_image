@@ -1,0 +1,2 @@
+#!/bin/bash
+julia -e 'using Pkg; Pkg.activate("."); Pkg.add(url="https://github.com/pe1995/SpectrumImage.jl.git"); Pkg.update(); Pkg.instantiate()'

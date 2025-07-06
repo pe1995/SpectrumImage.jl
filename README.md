@@ -1,4 +1,4 @@
-<a href="url"><img src="example_image.png" height=100% width=100%/></a> 
+<a href="url"><img src="example2.png" height=100% width=100%/></a> 
 
 # SpectrumImage.jl
 

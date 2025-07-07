@@ -11,6 +11,7 @@ using Plots
 
 export spectrum
 export read_spectrum
+export spectrum_gif
 
 # Write your package code here.
 include("_spectrum_image.jl")

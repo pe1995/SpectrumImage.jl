@@ -1,5 +1,5 @@
 """
-    spectrum(λ, F; colormap="gist_rainbow", rows=30, separator_width=1.5, show_lambda_range=false, λ_UV=nothing, λ_IR=nothing, F_low=minimum(F), F_high=maximum(F), line_indicators=[], indicator_fontsize="small", units="", kwargs...)
+    spectrum(λ, F; colormap="gist_rainbow", rows=30, figsize=(9,6), separator_width=1.5, show_lambda_range=false, λ_UV=nothing, λ_IR=nothing, F_low=minimum(F), F_high=maximum(F), line_indicators=[], indicator_fontsize="small", units="", kwargs...)
 
 Create a 2D spectrum image from wavelength and Flux arrays. 
 Wavelength will be used as the indicator for color, and should be chosen from `red` to `blue`.
@@ -24,10 +24,10 @@ data = read_spectrum("my_spectrum.csv", ',', skipstart=1)
 f, ax = spectrum(data[:, 1], data[:, 2]; rows=30, figsize=(9, 6), show_lambda_range=true, λ_IR=5500, line_indicators=[5500, 5400]);
 ```
 """
-function spectrum(λ, F; colormap="gist_rainbow", rows=30, separator_width=1.5, show_lambda_range=false, λ_UV=-1, λ_IR=-1, F_low=-1, F_high=-1, line_indicators=[], indicator_fontsize="small", units="", kwargs...)
+function spectrum(λ, F; colormap="gist_rainbow", figsize=(9,6), rows=30, separator_width=1.5, show_lambda_range=false, λ_UV=-1, λ_IR=-1, F_low=-1, F_high=-1, line_indicators=[], indicator_fontsize="small", units="", kwargs...)
     plt = matplotlib.pyplot
     matplotlib.style.use("dark_background")
-
+    
     λ_sort = sortperm(λ, rev=true)
 
     λ = λ[λ_sort]
@@ -67,7 +67,7 @@ function spectrum(λ, F; colormap="gist_rainbow", rows=30, separator_width=1.5, 
         end
     end
 
-    f, ax = plt.subplots(1, 1; layout="tight", kwargs...)
+    f, ax = plt.subplots(1, 1; layout="tight", figsize=figsize)
     ax.imshow(image_matrix, aspect="auto", origin="upper", interpolation="none", rasterized=true)
     
     c = 1
@@ -99,3 +99,42 @@ end
 
 
 read_spectrum = readdlm
+
+
+"""
+    spectrum_gif(out_path, λ, Fs; store_at=mktempdir(), fps=5, dpi=300, figsize=(9,6), kwargs...)
+
+Create an animation from multiple fluxes and store it at `out_path`. Parameters passed as kwargs are passed on to `spectrum`.
+`Fs` is assumed to be an array of size (nLambda,nFluxes).
+"""
+function spectrum_gif(out_path, λ, Fs; store_at=mktempdir(), fps=5, dpi=300, figsize=(9,6), kwargs...)
+    @info "Building Animation..."
+    
+    fls = []
+    
+    for i in axes(Fs, 2)
+        
+        F = Fs[:, i]
+        matplotlib.pyplot.close()
+        f, ax = spectrum(λ, F; figsize=figsize, kwargs...)
+        
+        f.savefig(joinpath(store_at,"cube_$(i).png"), bbox_inches="tight", dpi=dpi)
+        append!(fls, [joinpath(store_at,"cube_$(i).png")])
+    end
+    
+    v_images = Images.load.(fls)
+    anim = @animate for i ∈ eachindex(v_images)
+        Plots.plot(
+            v_images[i], 
+            axis=([], false), 
+            background_color=:black,
+            size=(figsize[1]*dpi, figsize[2]*dpi)
+        )
+    end every 1
+    g = gif(anim, out_path, fps=fps)
+    rm.(fls)
+
+    @info "...Animation built."
+
+    g
+end

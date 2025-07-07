@@ -5,6 +5,8 @@ using PythonPlot
 using DelimitedFiles
 using PythonCall
 using ArgParse
+using Images
+using Plots
 @reexport using LaTeXStrings
 
 export spectrum

@@ -7,6 +7,7 @@ using PythonCall
 using ArgParse
 using Images
 using Plots
+using Interpolations
 @reexport using LaTeXStrings
 
 export spectrum

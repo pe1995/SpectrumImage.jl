@@ -24,30 +24,109 @@ data = read_spectrum("my_spectrum.csv", ',', skipstart=1)
 f, ax = spectrum(data[:, 1], data[:, 2]; rows=30, figsize=(9, 6), show_lambda_range=true, λ_IR=5500, line_indicators=[5500, 5400]);
 ```
 """
-function spectrum(λ, F; colormap="gist_rainbow", figsize=(9,6), rows=30, separator_width=1.5, show_lambda_range=false, λ_UV=-1, λ_IR=-1, F_low=-1, F_high=-1, line_indicators=[], indicator_fontsize="small", units="", header=nothing, kwargs...)
+function spectrum(λ, F; colormap="gist_rainbow", figsize=(9,6), rows=30, separator_width=1.5, color_spacing="index", unify_spacing=false, show_lambda_range=true, λ_UV=-1, λ_IR=-1, F_low=-1, F_high=-1, line_indicators=[], windows=nothing, window_gap_fraction=0.05, window_gap_color=[0,0,0], indicator_fontsize="small", units=L"\rm \,\AA", header=nothing, kwargs...)
     plt = matplotlib.pyplot
     matplotlib.style.use("dark_background")
-    
-    λ_sort = sortperm(λ, rev=true)
 
+    λ_sort = sortperm(λ, rev=true)
     λ = λ[λ_sort]
     F = F[λ_sort]
 
+    ll = length(λ)
+
     notgiven(a) = a < 0
 
+    windows = if isnothing(windows)
+        [eachindex(λ)|>collect]
+    elseif windows == "4MOST"
+        @info "Cutting to 4MOST windows 3926 Å-4355 Å, 5160 Å-5730 Å, and 6100 Å-6790 Å."
+        [findall(3926 .<= λ .<= 4355), findall(5160 .<= λ .<= 5730), findall(6100 .<= λ .<= 6790)]
+    else
+        [findall(wmin .<= λ .<= wmax) for (wmin, wmax) in windows]
+    end
+
+    red_limits = λ[first.(windows)]
+    blue_limits = λ[last.(windows)]
+    window_sort = sortperm(red_limits, rev=true)
+    windows = windows[window_sort]
+    red_limits = red_limits[window_sort]
+    blue_limits = blue_limits[window_sort]
+
+    if !unify_spacing
+        for w in windows
+            d = abs.(diff(λ[w]))
+            if !(all(d .≈ d[1]))
+                @warn "Your input spectrum is not uniform in λ. This means that each pixel in the final image may correspond to a different wavelength spacing! Consider `unify_spacing=true`."
+                @warn "min:$(minimum(d)), max:$(maximum(d)),  mean:$(sum(d)/length(d))"
+            end
+        end
+    end
+
+    # now we construct a new wavelength araay based on these windows
+    λ, F = if !unify_spacing
+        vcat([λ[w] for w in windows]...), vcat([F[w] for w in windows]...)
+    else
+        @info "Linear interpolating fluxes to uniform λ grid for each window..."
+        lam_all, f_all = [], []
+        for w in windows
+            # sort increasing
+            λ_sort = sortperm(λ[w])
+            l = λ[w][λ_sort]
+            fl = F[w][λ_sort]
+
+            # interpolate
+            l_new = range(first(l), last(l), length=ll) |> collect
+            f_new = linear_interpolation(Interpolations.deduplicate_knots!(l), fl).(l_new)
+            λ_sort = sortperm(l_new, rev=true)
+
+            append!(lam_all, [l_new[λ_sort]])
+            append!(f_all, [f_new[λ_sort]])
+        end
+
+        vcat(lam_all...), vcat(f_all...)
+    end
+
     min_l, max_l = notgiven(λ_IR) ? first(λ) : λ_IR, notgiven(λ_UV) ? last(λ) : λ_UV
-    λ_norm = abs.((λ .- min_l) ./ (max_l - min_l))
+    λ_norm = if color_spacing == "index" 
+        @info "Colors computed based on index in λ array."
+        @info "Note: If λ spacing is not uniform, this will result in a stretching of spectral features in color, as every pixel gets a new color."
+        abs.((collect(eachindex(λ)) .- 1.0) ./ (length(λ) - 1.0)) 
+    else
+        @info "Colors computed based on wavelength values."
+        @info "Note that this means that points closer together will have a more similar color. This also means that gaps in the spectrum will cause gaps in the color."
+        # this scales wavelength based on the numbers --> non-continous when there gaps
+        # however, this will respect non-uniform spacing
+        abs.((λ .- min_l) ./ (max_l - min_l))
+    end
+    
     λ_norm[λ .> min_l] .= 0.0
     λ_norm[λ .< max_l] .= 1.0
 
     min_F, max_F = notgiven(F_low) ? minimum(F) : F_low, notgiven(F_high) ? maximum(F) : F_high
     F_norm = (F .- min_F) ./ (max_F - min_F)
-    
-    columns = floor(Int, length(λ) / rows)
-    image_matrix = zeros(rows, columns, 3)
 
     cmap = plt.get_cmap(colormap)
     colors = pyconvert.(Array, cmap(λ_norm))
+    colors = [colors[i, 1:3] for i in axes(colors, 1)]
+    
+    # now we add black limiters in between the windows
+    if length(windows) > 1
+        length_sep = floor(Int, length(λ_norm) / rows * window_gap_fraction)
+        for i in 1:length(windows)-1
+            w = windows[i]
+            insert_at_index = findfirst(x -> blue_limits[i] > x, λ) -1
+            for j in 1:length_sep
+                insert!(λ, insert_at_index, blue_limits[i])
+                insert!(F, insert_at_index, 0)
+                insert!(F_norm, insert_at_index, 1)
+                insert!(λ_norm, insert_at_index, λ_norm[insert_at_index])
+                insert!(colors, insert_at_index, floor.(Int, window_gap_color))
+            end
+        end
+    end
+
+    columns = floor(Int, length(λ_norm) / rows)
+    image_matrix = zeros(rows, columns, 3)
 
     line_indicator_index = Dict()
     for line in line_indicators
@@ -62,7 +141,7 @@ function spectrum(λ, F; colormap="gist_rainbow", figsize=(9,6), rows=30, separa
     c = 1
     for i in axes(image_matrix, 1)
         for j in axes(image_matrix, 2)
-            image_matrix[i, j, :] = colors[c, 1:3] * F_norm[c]
+            image_matrix[i, j, :] = colors[c] * F_norm[c]
             c += 1
         end
     end
@@ -90,7 +169,7 @@ function spectrum(λ, F; colormap="gist_rainbow", figsize=(9,6), rows=30, separa
     
 
     if show_lambda_range
-        ax.text(0.0, 1.01, L"\rm \lambda: "*"$(round(maximum(λ), sigdigits=5))"*units*L"\rm\, - \,"*"$(round(minimum(λ), sigdigits=5))"*units, transform=ax.transAxes, ha="left", va="bottom")
+        ax.text(0.0, 1.01, L"\rm \lambda: "*"$(round(minimum(λ), sigdigits=5))"*units*L"\rm\, - \,"*"$(round(maximum(λ), sigdigits=5))"*units, transform=ax.transAxes, ha="left", va="bottom")
     end
 
     if !isnothing(header)

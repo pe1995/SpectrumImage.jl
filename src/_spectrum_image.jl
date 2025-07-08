@@ -39,7 +39,7 @@ function spectrum(λ, F; colormap="gist_rainbow", figsize=(9,6), rows=30, separa
     windows = if isnothing(windows)
         [eachindex(λ)|>collect]
     elseif windows == "4MOST"
-        @info "Cutting to 4MOST windows 3926 Å-4355 Å, 5160 Å-5730 Å, and 6100 Å-6790 Å."
+        @info "Cutting to 4MOST windows 3926Å - 4355Å, 5160Å - 5730Å, and 6100Å - 6790Å."
         [findall(3926 .<= λ .<= 4355), findall(5160 .<= λ .<= 5730), findall(6100 .<= λ .<= 6790)]
     else
         [findall(wmin .<= λ .<= wmax) for (wmin, wmax) in windows]
@@ -75,7 +75,7 @@ function spectrum(λ, F; colormap="gist_rainbow", figsize=(9,6), rows=30, separa
             fl = F[w][λ_sort]
 
             # interpolate
-            l_new = range(first(l), last(l), length=ll) |> collect
+            l_new = range(first(l), last(l), length=length(l)) |> collect
             f_new = linear_interpolation(Interpolations.deduplicate_knots!(l), fl).(l_new)
             λ_sort = sortperm(l_new, rev=true)
 

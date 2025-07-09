@@ -39,8 +39,6 @@ function spectrum(λ, F; colormap="gist_rainbow", figsize=(9,6), rows=30, separa
     λ = λ[λ_sort]
     F = F[λ_sort]
 
-    ll = length(λ)
-
     notgiven(a) = a < 0
 
     windows = if isnothing(windows)
@@ -99,7 +97,9 @@ function spectrum(λ, F; colormap="gist_rainbow", figsize=(9,6), rows=30, separa
         if !unify_spacing
             @info "Note: If λ spacing is not uniform, this will result in a stretching of spectral features in color, as every pixel gets a new color."
         end
-        abs.((collect(eachindex(λ)) .- 1.0) ./ (length(λ) - 1.0)) 
+        iminl = argmin(abs.(λ .- min_l))
+        imaxl = argmin(abs.(λ .- max_l))
+        abs.((collect(eachindex(λ)) .- iminl) ./ (imaxl - iminl)) 
     elseif color_spacing == "wavelength" 
         @info "Colors computed based on wavelength values."
         @info "Note that this means that points closer together will have a more similar color. This also means that gaps in the spectrum will cause gaps in the color."

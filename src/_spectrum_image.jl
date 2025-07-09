@@ -96,7 +96,9 @@ function spectrum(λ, F; colormap="gist_rainbow", figsize=(9,6), rows=30, separa
     min_l, max_l = notgiven(λ_IR) ? first(λ) : λ_IR, notgiven(λ_UV) ? last(λ) : λ_UV
     λ_norm = if color_spacing == "index" 
         @info "Colors computed based on index in λ array."
-        @info "Note: If λ spacing is not uniform, this will result in a stretching of spectral features in color, as every pixel gets a new color."
+        if !unify_spacing
+            @info "Note: If λ spacing is not uniform, this will result in a stretching of spectral features in color, as every pixel gets a new color."
+        end
         abs.((collect(eachindex(λ)) .- 1.0) ./ (length(λ) - 1.0)) 
     elseif color_spacing == "wavelength" 
         @info "Colors computed based on wavelength values."

@@ -1,5 +1,5 @@
 """
-    spectrum(λ, F; colormap="gist_rainbow", rows=30, figsize=(9,6), separator_width=1.5, show_lambda_range=false, λ_UV=nothing, λ_IR=nothing, F_low=minimum(F), F_high=maximum(F), line_indicators=[], indicator_fontsize="small", units="", kwargs...)
+    spectrum(λ, F; colormap="gist_rainbow", figsize=(9,6), rows=30, separator_width=1.5, color_spacing="index", unify_spacing=true, show_lambda_range=true, λ_UV=-1, λ_IR=-1, F_low=-1, F_high=-1, line_indicators=[], windows=nothing, window_gap_fraction=0.05, window_gap_color=[0,0,0], indicator_fontsize="small", units="AA", header=nothing, kwargs...)
 
 Create a 2D spectrum image from wavelength and Flux arrays. 
 Wavelength will be used as the indicator for color, and should be chosen from `red` to `blue`.
@@ -15,6 +15,12 @@ You can specify `line_indicators` in wavelength. At the corresponding positions 
 The `units` string will be pasted directly behind the line indicators, if wanted. `show_lambda_range` will add the lambda range to the top of the image.
 You can also specify `F_low` and `F_high` to adjust the maximum and minimum for the normalization.
 
+You can specify `windows` to cut your input spectrum accordingly and insert window separators in between (set `window_gap_color` for RGB color of the line, and `window_gap_fraction` for the line width in units of row fraction.)
+Note that the colormap will be uniform across all windows if `color_spacing="index"`, and respect the actual wavelength difference if you use `color_spacing="wavelength"`. There will be jumps in color if there are jumps in windows.
+
+If your input spectrum is not equally spaced in wavelength, this means that in the final image pixels directly next to each other are not corresponding to the same wavelength step.
+If you have more points in spectral lines for example this causes the lines to be spread. If you set `unify_spacing=true` the code will interpolate the flux in each window to avoid this.
+
 # Example:
 ```julia
 # read a spectrum from file with `,` separator, uses `readdlm`. Skip e.g. the first line in this example.
@@ -24,7 +30,7 @@ data = read_spectrum("my_spectrum.csv", ',', skipstart=1)
 f, ax = spectrum(data[:, 1], data[:, 2]; rows=30, figsize=(9, 6), show_lambda_range=true, λ_IR=5500, line_indicators=[5500, 5400]);
 ```
 """
-function spectrum(λ, F; colormap="gist_rainbow", figsize=(9,6), rows=30, separator_width=1.5, color_spacing="index", unify_spacing=false, show_lambda_range=true, λ_UV=-1, λ_IR=-1, F_low=-1, F_high=-1, line_indicators=[], windows=nothing, window_gap_fraction=0.05, window_gap_color=[0,0,0], indicator_fontsize="small", units=L"\rm \,\AA", header=nothing, kwargs...)
+function spectrum(λ, F; colormap="gist_rainbow", figsize=(9,6), rows=30, separator_width=1.5, color_spacing="index", unify_spacing=true, show_lambda_range=true, λ_UV=-1, λ_IR=-1, F_low=-1, F_high=-1, line_indicators=[], windows=nothing, window_gap_fraction=0.05, window_gap_color=[0,0,0], indicator_fontsize="small", units=L"\rm \,\AA", header=nothing, kwargs...)
     plt = matplotlib.pyplot
     matplotlib.style.use("dark_background")
 
@@ -91,12 +97,14 @@ function spectrum(λ, F; colormap="gist_rainbow", figsize=(9,6), rows=30, separa
         @info "Colors computed based on index in λ array."
         @info "Note: If λ spacing is not uniform, this will result in a stretching of spectral features in color, as every pixel gets a new color."
         abs.((collect(eachindex(λ)) .- 1.0) ./ (length(λ) - 1.0)) 
-    else
+    elseif color_spacing == "wavelength" 
         @info "Colors computed based on wavelength values."
         @info "Note that this means that points closer together will have a more similar color. This also means that gaps in the spectrum will cause gaps in the color."
         # this scales wavelength based on the numbers --> non-continous when there gaps
         # however, this will respect non-uniform spacing
         abs.((λ .- min_l) ./ (max_l - min_l))
+    else
+        error("Given colorspacing not available. Please put `index` or `wavelength`.")
     end
     
     λ_norm[λ .> min_l] .= 0.0

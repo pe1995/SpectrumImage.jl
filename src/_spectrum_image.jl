@@ -10,7 +10,8 @@ Kwargs will be passed to the plt.figure constructor. `plt.figure` and `ax` will 
 By default, the entire colormap will be used from the red end of `λ` to the blue end. You can optically specify where the red part should stop (`λ_IR`) and
 where the violet part should be begin (`λ_UV`). Space before and after will be filled by the respective color.
 
-You can specify `line_indicators` in wavelength. At the corresponding positions there will be white line indicators shown in the final image.
+You can specify `line_indicators` in wavelength. At the corresponding positions there will be white line indicators shown in the final image. 
+You can also pass a vector of pairs, where the second entry corresponds to the text you want to put in the image, e.g. [6562.8=>"Hα", 3968.5=>"Ca II - H", 3933.7=>"Ca II - K"].
 
 The `units` string will be pasted directly behind the line indicators, if wanted. `show_lambda_range` will add the lambda range to the top of the image.
 You can also specify `F_low` and `F_high` to adjust the maximum and minimum for the normalization.
@@ -137,11 +138,18 @@ function spectrum(λ, F; colormap="gist_rainbow", figsize=(9,6), rows=30, separa
     image_matrix = zeros(rows, columns, 3)
 
     line_indicator_index = Dict()
-    for line in line_indicators
+    line_indicator_text = Dict()
+    for lineind in line_indicators
+        line, text = if typeof(lineind) <: Pair
+            first(lineind), last(lineind)
+        else
+            lineind, "$(lineind)"*units
+        end
         if (line > first(λ)) | (line < last(λ))
             @warn "Line $(line) out or range for the given spectrum ."
         else
             line_indicator_index[argmin(abs.(λ .- line))] = line
+            line_indicator_text[argmin(abs.(λ .- line))] = text
         end
     end
 
@@ -163,7 +171,7 @@ function spectrum(λ, F; colormap="gist_rainbow", figsize=(9,6), rows=30, separa
         for j in axes(image_matrix, 2)
             if c in keys(line_indicator_index)
                 ax.vlines(j, i -1 -0.5, i - 1 +0.5, color="w", lw=separator_width)
-                ax.text(j+jsep, i -1, "$(line_indicator_index[c])"*units, color="w", ha="left", va="center", fontsize=indicator_fontsize)
+                ax.text(j+jsep, i -1, line_indicator_text[c], color="w", ha="left", va="center", fontsize=indicator_fontsize)
             end
             c += 1
         end

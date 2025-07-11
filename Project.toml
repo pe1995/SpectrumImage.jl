@@ -1,7 +1,7 @@
 name = "SpectrumImage"
 uuid = "6816fd01-2a9e-4fc7-9eda-4d4f84f225f6"
 authors = ["Philipp Eitner <eitner@mpia.de> and contributors"]
-version = "1.2.0"
+version = "1.3.0"
 
 [deps]
 ArgParse = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"

@@ -14,7 +14,7 @@ using LsqFit
 @reexport using LaTeXStrings
 
 export spectrum
-export read_spectrum
+export read_spectrum, read_line_indicators
 export spectrum_gif
 export normalize, continuum
 

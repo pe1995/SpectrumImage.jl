@@ -31,7 +31,13 @@ data = read_spectrum("my_spectrum.csv", ',', skipstart=1)
 f, ax = spectrum(data[:, 1], data[:, 2]; rows=30, figsize=(9, 6), show_lambda_range=true, λ_IR=5500, line_indicators=[5500, 5400]);
 ```
 """
-function spectrum(λ, F; colormap="gist_rainbow", figsize=(9,6), rows=30, separator_width=1.5, color_spacing="index", unify_spacing=true, show_lambda_range=true, λ_UV=-1, λ_IR=-1, F_low=-1, F_high=-1, line_indicators=[], windows=nothing, window_gap_fraction=0.05, window_gap_color=[0,0,0], indicator_fontsize="small", units=L"\rm \,\AA", header=nothing, kwargs...)
+function spectrum(λ, F; colormap="gist_rainbow", 
+    figsize=(9,6), rows=30, separator_width=1.5, color_spacing="index", 
+    unify_spacing=true, show_lambda_range=true, 
+    λ_UV=-1, λ_IR=-1, F_low=-1, F_high=-1, 
+    line_indicators=[], windows=nothing, window_gap_fraction=0.05, window_gap_color=[0,0,0], 
+    indicator_fontsize="small", units=L"\rm \,\AA", header=nothing, header_location="right", kwargs...)
+    # matplotlib for plotting
     plt = matplotlib.pyplot
     matplotlib.style.use("dark_background")
 
@@ -173,7 +179,11 @@ function spectrum(λ, F; colormap="gist_rainbow", figsize=(9,6), rows=30, separa
         for j in axes(image_matrix, 2)
             if c in keys(line_indicator_index)
                 ax.vlines(j, i -1 -0.5, i - 1 +0.5, color="w", lw=separator_width)
-                ax.text(j+jsep, i -1, line_indicator_text[c], color="w", ha="left", va="center", fontsize=indicator_fontsize)
+                if j<columns-floor(Int, columns*0.05)
+                    ax.text(j+jsep, i -1, line_indicator_text[c], color="w", ha="left", va="center", fontsize=indicator_fontsize)
+                else
+                    ax.text(j-jsep, i -1, line_indicator_text[c], color="w", ha="right", va="center", fontsize=indicator_fontsize)
+                end
             end
             c += 1
         end
@@ -191,7 +201,8 @@ function spectrum(λ, F; colormap="gist_rainbow", figsize=(9,6), rows=30, separa
     end
 
     if !isnothing(header)
-        ax.text(1.0, 1.01, header, transform=ax.transAxes, ha="right", va="bottom", color="w")
+        hx, hy, ha, va = header_location=="right" ? (1.0, 1.01, "right", "bottom") : (0.0, 1.01, "left", "bottom")
+        ax.text(hx, hy, header, transform=ax.transAxes, ha=ha, va=va, color="w")
     end
 
     ax.axis("off")
@@ -292,6 +303,13 @@ normalize(x, y; kwargs...) = y ./ continuum(x, y; kwargs...)
 
 
 #= Modify spectra =#
+
+function read_line_indicators(f, args...; as_latex=true, kwargs...)
+    wavelname = SpectrumImage.readdlm(f, args...; kwargs...)
+    wavel, name = wavelname[:, 1], wavelname[:, 2]
+    name = as_latex ? latexstring.(name) : name
+    [w=>n for (w, n) in zip(wavel, name)]
+end
 
 read_spectrum = readdlm
 

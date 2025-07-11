@@ -198,10 +198,6 @@ function spectrum(λ, F; colormap="gist_rainbow", figsize=(9,6), rows=30, separa
     f, ax
 end
 
-
-read_spectrum = readdlm
-
-
 """
     spectrum_gif(out_path, λ, Fs; store_at=mktempdir(), fps=5, dpi=300, figsize=(9,6), kwargs...)
 
@@ -237,3 +233,78 @@ function spectrum_gif(out_path, λ, Fs; store_at=mktempdir(), fps=5, dpi=300, fi
 
     g
 end
+
+
+
+
+
+#= Continuum =#
+
+function binned_maxima(x, y; nbins=max(floor(Int, 3*length(x)/1000), 10))
+    counts, bins = numpy.histogram(x, weights=y, bins=nbins)
+    counts = floor.(Int, SpectrumImage.pyconvert(Array, counts))
+    bins = SpectrumImage.pyconvert(Array, bins)
+
+    # compute maxima for continuum estimate
+    bin_centers = (bins[1:end-1] .+ bins[2:end]) ./ 2.0
+    bin_maxima = [maximum(y[bins[i-1] .< x .< bins[i]]) for i in 2:length(bins)]
+
+    bin_centers, bin_maxima
+end
+
+"""
+    continuum(x, y; bins=floor(Int, length(x)/1000), bandwidth=length(bins)/10)
+
+Normalize the spectrum approximatelly to remore brightness gradient from image.
+This procedure splits the spectrum in a number of `nbins` bins and makes a Kernel Density estimate 
+of the resulting weighted wavelength distribution. A scaling factor is fitted to the maxima. The continuum is returned.
+"""
+continuum(x, y; kwargs...) = continuum_function(x, y; kwargs...)(x)
+
+function continuum_function(x, y; nbins=max(floor(Int, 3*length(x)/1000), 10), bandwidth=std(x, Weights(y))/10)
+    # bin and get maxima
+    bin_centers, bin_maxima = binned_maxima(x, y; nbins=nbins)
+
+    # perform kernel density estimate and fit scaling factor
+    k = kde(bin_centers, weights=bin_maxima, bandwidth=bandwidth)
+    kde_scaled(x, p) = pdf(k, x) .* p[1]
+    r = curve_fit(kde_scaled, bin_centers, bin_maxima, [1.0])
+
+    xi -> kde_scaled(xi, r.param)
+end
+
+function iterate_continuum(x, y; nbins=max(floor(Int, 3*length(x)/1000), 10))
+    # bin and get maxima
+    bin_centers, bin_maxima = binned_maxima(x, y; nbins=nbins)
+    ci(xi, p) = begin
+        f = continuum_function(x, y; bandwidth=abs.(p[1]), nbins=nbins)
+        f(xi)
+    end
+    r = curve_fit(ci, bin_centers, bin_maxima, [(maximum(x) - minimum(x))/60])
+    ci(x, r.param)
+end
+
+normalize(x, y; kwargs...) = y ./ continuum(x, y; kwargs...)
+
+
+
+
+
+
+#= Modify spectra =#
+
+read_spectrum = readdlm
+
+"""
+    planck_λ(λ, T)
+
+Compute the Planck function in cgs units.
+"""
+planck_λ(λ, T) = twohc2 /λ^5 /(exp(hc_k / (λ*T)) - 1.0)
+
+"""
+    planck_ν(ν, T)
+
+Compute the Planck function in cgs units.
+"""
+planck_ν(ν, T) = 2 * HPlanck * ν^3 / CLight^2 / (exp(HPlanck * ν / (KBoltzmann * T)) - 1.0)

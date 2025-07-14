@@ -11,6 +11,7 @@ using Interpolations
 using StatsBase
 using KernelDensity
 using LsqFit
+using NPZ
 @reexport using LaTeXStrings
 
 export spectrum

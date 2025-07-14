@@ -14,7 +14,8 @@ You can specify `line_indicators` in wavelength. At the corresponding positions 
 You can also pass a vector of pairs, where the second entry corresponds to the text you want to put in the image, e.g. [6562.8=>"Hα", 3968.5=>"Ca II - H", 3933.7=>"Ca II - K"].
 
 The `units` string will be pasted directly behind the line indicators, if wanted. `show_lambda_range` will add the lambda range to the top of the image.
-You can also specify `F_low` and `F_high` to adjust the maximum and minimum for the normalization.
+You can also specify `F_low` and `F_high` to adjust the maximum and minimum for the normalization. 
+You can also specify `F_low` and `F_high` per window, i.e. for 2 windows you can do `F_low=[-1, 0.5], F_high=[1.1, -1]` to set the limits. -1 will put the limit automatically to the max and min in that window.
 
 You can specify `windows` to cut your input spectrum accordingly and insert window separators in between (set `window_gap_color` for RGB color of the line, and `window_gap_fraction` for the line width in units of row fraction.)
 Note that the colormap will be uniform across all windows if `color_spacing="index"`, and respect the actual wavelength difference if you use `color_spacing="wavelength"`. There will be jumps in color if there are jumps in windows.
@@ -34,8 +35,8 @@ f, ax = spectrum(data[:, 1], data[:, 2]; rows=30, figsize=(9, 6), show_lambda_ra
 function spectrum(λ, F; colormap="gist_rainbow", 
     figsize=(9,6), rows=30, separator_width=1.5, color_spacing="index", 
     unify_spacing=true, show_lambda_range=true, 
-    λ_UV=-1, λ_IR=-1, F_low=-1, F_high=-1, 
-    line_indicators=[], windows=nothing, window_gap_fraction=0.05, window_gap_color=[0,0,0], 
+    λ_UV=-1, λ_IR=-1, F_low=-1, F_high=-1,
+    line_indicators=[], windows=nothing, window_gap_fraction=0.05, window_gap_color=[0,0,0],
     indicator_fontsize="small", units=L"\rm \,\AA", header=nothing, header_location="right", kwargs...)
     # matplotlib for plotting
     plt = matplotlib.pyplot
@@ -45,7 +46,7 @@ function spectrum(λ, F; colormap="gist_rainbow",
     λ = λ[λ_sort]
     F = F[λ_sort]
 
-    notgiven(a) = a < 0
+    notgiven(a) = a < 0 
 
     windows = if isnothing(windows)
         [eachindex(λ)|>collect]
@@ -54,6 +55,17 @@ function spectrum(λ, F; colormap="gist_rainbow",
         [findall(3926 .<= λ .<= 4355), findall(5160 .<= λ .<= 5730), findall(6100 .<= λ .<= 6790)]
     else
         [findall(wmin .<= λ .<= wmax) for (wmin, wmax) in windows]
+    end
+
+    F_low = (length(F_low) == 1) ? [F_low] : F_low
+    F_high = (length(F_high) == 1) ? [F_high] : F_high
+    F_by_window = (length(F_high) > 1) | (length(F_low) > 1)
+    F_low, F_high = if F_by_window
+        fl = (length(F_low) == 1) ? [F_low[1] for _ in windows] : F_low
+        fh = (length(F_high) == 1) ? [F_high[1] for _ in windows] : F_high
+        fl, fh
+    else
+        F_low[1], F_high[1]
     end
 
     red_limits = λ[first.(windows)]
@@ -73,13 +85,13 @@ function spectrum(λ, F; colormap="gist_rainbow",
         end
     end
 
-    # now we construct a new wavelength araay based on these windows
+    # now we construct a new wavelength array based on these windows
     λ, F = if !unify_spacing
         vcat([λ[w] for w in windows]...), vcat([F[w] for w in windows]...)
     else
         @info "Linear interpolating fluxes to uniform λ grid for each window..."
         lam_all, f_all = [], []
-        for w in windows
+        for (wi, w) in enumerate(windows)
             # sort increasing
             λ_sort = sortperm(λ[w])
             l = λ[w][λ_sort]
@@ -89,6 +101,12 @@ function spectrum(λ, F; colormap="gist_rainbow",
             l_new = range(first(l), last(l), length=length(l)) |> collect
             f_new = linear_interpolation(Interpolations.deduplicate_knots!(l), fl).(l_new)
             λ_sort = sortperm(l_new, rev=true)
+
+            # normalize by window if wanted
+            if F_by_window
+                min_F, max_F = notgiven(F_low[wi]) ? minimum(f_new) : F_low[wi], notgiven(F_high[wi]) ? maximum(f_new) : F_high[wi]
+                f_new .= (f_new .- min_F) ./ (max_F - min_F)
+            end
 
             append!(lam_all, [l_new[λ_sort]])
             append!(f_all, [f_new[λ_sort]])
@@ -119,8 +137,15 @@ function spectrum(λ, F; colormap="gist_rainbow",
     λ_norm[λ .> min_l] .= 0.0
     λ_norm[λ .< max_l] .= 1.0
 
-    min_F, max_F = notgiven(F_low) ? minimum(F) : F_low, notgiven(F_high) ? maximum(F) : F_high
-    F_norm = (F .- min_F) ./ (max_F - min_F)
+    F_norm = if F_by_window
+        F
+    else
+        min_F, max_F = notgiven(F_low) ? minimum(F) : F_low, notgiven(F_high) ? maximum(F) : F_high
+        (F .- min_F) ./ (max_F - min_F)
+    end
+
+    F_norm[F_norm.<0.0] .= 0.0
+    F_norm[F_norm.>1.0] .= 1.0
 
     cmap = plt.get_cmap(colormap)
     colors = pyconvert.(Array, cmap(λ_norm))
@@ -249,7 +274,7 @@ end
 
 
 
-#= Continuum =#
+#= Continuum normalization =#
 
 function binned_maxima(x, y; nbins=max(floor(Int, 3*length(x)/1000), 10))
     counts, bins = numpy.histogram(x, weights=y, bins=nbins)
@@ -302,7 +327,7 @@ normalize(x, y; kwargs...) = y ./ continuum(x, y; kwargs...)
 
 
 
-#= Modify spectra =#
+#= Read spectra =#
 
 function read_line_indicators(f, args...; as_latex=true, kwargs...)
     wavelname = SpectrumImage.readdlm(f, args...; kwargs...)
@@ -311,7 +336,20 @@ function read_line_indicators(f, args...; as_latex=true, kwargs...)
     [w=>n for (w, n) in zip(wavel, name)]
 end
 
-read_spectrum = readdlm
+"""
+    read_spectrum(args...; format=:readdlm, kwargs...)
+
+Read the spectrum from a file. Calls the function specified as `:func` with all arguments in args and kwargs.
+Use e.g. `:readdlm` or `:npzread` for `.npy` files.
+"""
+read_spectrum(args...; format=:readdlm, kwargs...) = getfield(@__MODULE__, format)(args...; kwargs...)
+
+
+
+
+
+
+#= Aux functions =#
 
 """
     planck_λ(λ, T)

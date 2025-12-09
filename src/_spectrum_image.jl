@@ -36,7 +36,7 @@ function spectrum(λ, F; colormap="gist_rainbow",
     figsize=(9,6), rows=30, separator_width=1.5, color_spacing="index", 
     unify_spacing=true, show_lambda_range=true, 
     λ_UV=-1, λ_IR=-1, F_low=-1, F_high=-1,
-    line_indicators=[], windows=nothing, window_gap_fraction=0.05, window_gap_color=[0,0,0],
+    line_indicators=[], line_indicator_colors=[], windows=nothing, window_gap_fraction=0.05, window_gap_color=[0,0,0],
     indicator_fontsize="small", units=L"\rm \,\AA", header=nothing, header_location="right", kwargs...)
     # matplotlib for plotting
     plt = matplotlib.pyplot
@@ -172,6 +172,7 @@ function spectrum(λ, F; colormap="gist_rainbow",
 
     line_indicator_index = Dict()
     line_indicator_text = Dict()
+    line_indicator_color = Dict()
     for lineind in line_indicators
         line, text = if typeof(lineind) <: Pair
             first(lineind), last(lineind)
@@ -181,8 +182,20 @@ function spectrum(λ, F; colormap="gist_rainbow",
         if (line > first(λ)) | (line < last(λ))
             @warn "Line $(line) out or range for the given spectrum ."
         else
-            line_indicator_index[argmin(abs.(λ .- line))] = line
-            line_indicator_text[argmin(abs.(λ .- line))] = text
+            idx_li = argmin(abs.(λ .- line))
+            line_indicator_index[idx_li] = line
+            line_indicator_text[idx_li] = text
+
+            if typeof(line_indicator_colors) <: AbstractArray
+                if line in first.(line_indicator_colors)
+                    color_idx = argmin(abs.((line .- first.(line_indicator_colors))))
+                    line_indicator_color[idx_li] = last(line_indicator_colors[color_idx])
+                else
+                    line_indicator_color[idx_li] = "w"
+                end
+            else
+                line_indicator_color[idx_li] = line_indicator_colors
+            end
         end
     end
 
@@ -203,11 +216,11 @@ function spectrum(λ, F; colormap="gist_rainbow",
     for i in axes(image_matrix, 1)
         for j in axes(image_matrix, 2)
             if c in keys(line_indicator_index)
-                ax.vlines(j, i -1 -0.5, i - 1 +0.5, color="w", lw=separator_width)
+                ax.vlines(j, i -1 -0.5, i - 1 +0.5, color=line_indicator_color[c], lw=separator_width)
                 if j<columns-floor(Int, columns*0.05)
-                    ax.text(j+jsep, i -1, line_indicator_text[c], color="w", ha="left", va="center", fontsize=indicator_fontsize)
+                    ax.text(j+jsep, i -1, line_indicator_text[c], color=line_indicator_color[c], ha="left", va="center", fontsize=indicator_fontsize)
                 else
-                    ax.text(j-jsep, i -1, line_indicator_text[c], color="w", ha="right", va="center", fontsize=indicator_fontsize)
+                    ax.text(j-jsep, i -1, line_indicator_text[c], color=line_indicator_color[c], ha="right", va="center", fontsize=indicator_fontsize)
                 end
             end
             c += 1

@@ -342,11 +342,18 @@ normalize(x, y; kwargs...) = y ./ continuum(x, y; kwargs...)
 
 #= Read spectra =#
 
-function read_line_indicators(f, args...; as_latex=true, kwargs...)
+function read_line_indicators(f, args...; as_latex=true, default_color="w", kwargs...)
     wavelname = SpectrumImage.readdlm(f, args...; kwargs...)
-    wavel, name = wavelname[:, 1], wavelname[:, 2]
+     wavel, name, lcolor = if size(wavelname, 2) == 2
+        wavel, name = wavelname[:, 1], wavelname[:, 2]
+        wavel, name, [default_color for _ in size(wavelname, 1)]
+    else
+        wavel, name, lcolor = wavelname[:, 1], wavelname[:, 2], wavelname[:, 3]
+        lcolor[length.(lcolor) .== 0] .= default_color
+        wavel, name, lcolor
+    end
     name = as_latex ? latexstring.(name) : name
-    [w=>n for (w, n) in zip(wavel, name)]
+    [w=>n for (w, n) in zip(wavel, name)], [w=>n for (w, n) in zip(wavel, lcolor)]
 end
 
 """
